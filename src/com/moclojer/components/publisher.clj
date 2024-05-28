@@ -1,8 +1,10 @@
-(ns components.redis-publisher
-  (:require [clojure.data.json :as json]
-            [com.stuartsierra.component :as component]
-            [components.logs :as logs])
-  (:import [redis.clients.jedis JedisPoolConfig JedisPooled]))
+(ns com.moclojer.components.publisher
+  (:require
+   [clojure.data.json :as json]
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs])
+  (:import
+   [redis.clients.jedis JedisPoolConfig JedisPooled]))
 
 (defprotocol IPublisher
   (publish! [this queue-name message])
@@ -13,7 +15,7 @@
      on track. The created queue will be named pending.<queue-name>.")
   (start-job! [this job]))
 
-(defrecord RedisPublisher [config jobs sentry]
+(defrecord Publisher [config jobs sentry]
   component/Lifecycle
   (start [this]
     (logs/log :info "starting redis publisher")
@@ -51,15 +53,15 @@
         (recur (inc i))))))
 
 (defn new-redis-publisher
-  ([queue-jobs] (->RedisPublisher {} queue-jobs {}))
-  ([] (->RedisPublisher {} [] {})))
+  ([queue-jobs] (->Publisher {} queue-jobs {}))
+  ([] (->Publisher {} [] {})))
 
 (comment
   (def rp
     (component/start
-     (->RedisPublisher {:config {:redis-publisher {:uri "redis://localhost:6379"}}}
-                       []
-                       nil)))
+     (->Publisher {:config {:redis-publisher {:uri "redis://localhost:6379"}}}
+                  []
+                  nil)))
 
   rp
 
@@ -81,7 +83,7 @@
 ;; mock in memory publisher for testing 
 (def mock-publisher (atom {}))
 
-(defrecord MockRedisPublisher [config]
+(defrecord MockPublisher [config]
   component/Lifecycle
   (start [this]
     (assoc this :publish-conn nil))
@@ -95,6 +97,3 @@
     (if-let [state (get @mock-publisher queue-name)]
       (swap! mock-publisher assoc queue-name (conj state message))
       (swap! mock-publisher assoc queue-name [message]))))
-
-(defn mock-redis-publisher []
-  (->MockRedisPublisher {}))

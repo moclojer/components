@@ -1,4 +1,4 @@
-(ns components.logs
+(ns com.moclojer.components.logs
   (:require [clojure.string :as str]
             [taoensso.timbre :as timbre]
             [taoensso.timbre.appenders.core :as core-appenders]
@@ -41,12 +41,12 @@
                     {:appenders
                      {:println
                       (core-appenders/println-appender
-                        {:stream stream})}})]
+                       {:stream stream})}})]
     (when prod? (clean-dep-logs))
     (timbre/merge-config!
-      (merge appenders
-             {:min-level level
-              :ns-filter ns-filter}))))
+     (merge appenders
+            {:min-level level
+             :ns-filter ns-filter}))))
 
 (defmacro log [level & args]
   `(timbre/log ~level ~@args))

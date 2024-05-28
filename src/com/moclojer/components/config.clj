@@ -1,7 +1,8 @@
-(ns components.config
-  (:require [aero.core :as aero]
-            [clojure.java.io :as io]
-            [com.stuartsierra.component :as component]))
+(ns com.moclojer.components.config
+  (:require
+   [aero.core :as aero]
+   [clojure.java.io :as io]
+   [com.stuartsierra.component :as component]))
 
 (def ^:private current-profile (keyword (or (System/getenv "PROFILE") "dev")))
 
@@ -18,10 +19,3 @@
   component/Lifecycle
   (start [this] this)
   (stop  [this] this))
-
-(defn new-config
-  ([]
-   (new-config {}))
-  ([input-map]
-   (map->Config {:config (read-config input-map)})))
-

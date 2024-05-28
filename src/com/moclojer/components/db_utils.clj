@@ -1,4 +1,4 @@
-(ns components.db-utils
+(ns com.moclojer.components.db-utils
   (:require [clojure.string :as s]))
 
 (defn- format-credentials [uri]

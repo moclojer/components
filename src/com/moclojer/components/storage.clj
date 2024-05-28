@@ -1,10 +1,11 @@
-(ns components.storage
-  (:require [clojure.java.io :as io]
-            [cognitect.aws.client.api :as aws]
-            [cognitect.aws.credentials :as cred]
-            [com.stuartsierra.component :as component]
-            [components.config :as config]
-            [components.logs :as logs]))
+(ns com.moclojer.components.storage
+  (:require
+   [clojure.java.io :as io]
+   [cognitect.aws.client.api :as aws]
+   [cognitect.aws.credentials :as cred]
+   [com.moclojer.components.config :as config]
+   [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component]))
 
 (defprotocol IStorage
   (initialize [this bucket-name])
@@ -115,9 +116,6 @@
     (-> (-> this :storage)
         (aws/invoke {:op :DeleteBucket
                      :request {:Bucket bucket-name}}))))
-
-(defn new-storage []
-  (map->Storage {}))
 
 (comment
   (def yml "

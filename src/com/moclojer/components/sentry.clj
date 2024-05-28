@@ -1,9 +1,11 @@
-(ns components.sentry
-  (:require [com.stuartsierra.component :as component]
-            [components.logs :as logs]
-            [sentry-clj.core :as sentry]
-            [sentry-clj.tracing :as sentry-tr])
-  (:import [io.sentry CustomSamplingContext]))
+(ns com.moclojer.components.sentry
+  (:require
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs]
+   [sentry-clj.core :as sentry]
+   [sentry-clj.tracing :as sentry-tr])
+  (:import
+   [io.sentry CustomSamplingContext]))
 
 (defprotocol SentryLogger
   (send-event! [this event])
@@ -44,7 +46,7 @@
            (logs/log :warn "uncaught exception")
            (send-event! this {:throwable exception})))))))
 
-(defrecord MockSentry [config]
+(defrecord SentryMock [config]
   component/Lifecycle
   (start [this]
     (assoc this :sentry-mem {}))
@@ -56,12 +58,6 @@
       (assoc sentry-mem :error event)))
 
   (set-as-default-exception-handler [this] this))
-
-(defn new-mock-sentry []
-  (->MockSentry {}))
-
-(defn new-sentry []
-  (->Sentry {}))
 
 (comment
   (def sc

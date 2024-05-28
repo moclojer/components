@@ -1,20 +1,21 @@
-(ns components.router
-  (:require [com.stuartsierra.component :as component]
-            [components.logs :as logs]
-            [components.sentry :as sentry]
-            [muuntaja.core :as m]
-            [reitit.coercion.malli :as reitit.malli]
-            [reitit.dev.pretty :as pretty]
-            [reitit.http :as http]
-            [reitit.http.coercion :as coercion]
-            [reitit.http.interceptors.exception :as exception]
-            [reitit.http.interceptors.multipart :as multipart]
-            [reitit.http.interceptors.muuntaja :as muuntaja]
-            [reitit.http.interceptors.parameters :as parameters]
-            [reitit.pedestal :as pedestal]
-            [reitit.ring :as ring]
-            [reitit.swagger :as swagger]
-            [reitit.swagger-ui :as swagger-ui]))
+(ns com.moclojer.components.router
+  (:require
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs]
+   [com.moclojer.components.sentry :as sentry]
+   [muuntaja.core :as m]
+   [reitit.coercion.malli :as reitit.malli]
+   [reitit.dev.pretty :as pretty]
+   [reitit.http :as http]
+   [reitit.http.coercion :as coercion]
+   [reitit.http.interceptors.exception :as exception]
+   [reitit.http.interceptors.multipart :as multipart]
+   [reitit.http.interceptors.muuntaja :as muuntaja]
+   [reitit.http.interceptors.parameters :as parameters]
+   [reitit.pedestal :as pedestal]
+   [reitit.ring :as ring]
+   [reitit.swagger :as swagger]
+   [reitit.swagger-ui :as swagger-ui]))
 
 (defn send-sentry-evt-from-req! [req ex]
   (if-let [sentry-cmp (get-in req [:components :sentry])]
@@ -89,7 +90,3 @@
   component/Lifecycle
   (start [this] this)
   (stop  [this] this))
-
-(defn new-router
-  [routes]
-  (map->Router {:router (router routes)}))

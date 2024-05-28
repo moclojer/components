@@ -1,8 +1,9 @@
-(ns components.http
-  (:require [clj-http.client :as http]
-            [clj-http.util :as http-util]
-            [com.stuartsierra.component :as component]
-            [components.logs :as logs]))
+(ns com.moclojer.components.http
+  (:require
+   [clj-http.client :as http]
+   [clj-http.util :as http-util]
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs]))
 
 (defn request-fn
   "Accepts :req which should be a map containing the following keys:
@@ -63,10 +64,8 @@
                            :req req
                            :resp resp})))))))
 
-(defn new-http [] (map->Http {}))
-
 (comment
-  (def hp (component/start (new-http)))
+  (def hp (component/start (->Http {})))
 
   (request hp {:url "https://google.com"
                :method :get})
@@ -113,22 +112,18 @@
                            :req req
                            :resp resp})))))))
 
-(defn new-http-mock
-  [responses]
-  (->HttpMock responses))
-
 (comment
   (def m (component/start
-          (new-http-mock [{:url "https://test.com"
-                           :method :get
-                           :response
-                           {:status 200
-                            :body "hello world"}}
-                          {:url "https://test.com"
-                           :method :put
-                           :response (fn [req]
-                                       {:status 200
-                                        :body (:body req)})}])))
+          (->HttpMock [{:url "https://test.com"
+                        :method :get
+                        :response
+                        {:status 200
+                         :body "hello world"}}
+                       {:url "https://test.com"
+                        :method :put
+                        :response (fn [req]
+                                    {:status 200
+                                     :body (:body req)})}])))
 
   (request m {:url "https://test.com"})
   ;; => {:status 200

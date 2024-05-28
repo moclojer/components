@@ -1,12 +1,14 @@
-(ns components.redis-queue
-  (:require [clojure.data.json :as json]
-            [com.stuartsierra.component :as component]
-            [components.logs :as logs]
-            [components.sentry :as sentry])
-  (:import [redis.clients.jedis JedisPoolConfig JedisPooled JedisPubSub]
-           [redis.clients.jedis.exceptions JedisConnectionException]))
+(ns com.moclojer.components.consumer
+  (:require
+   [clojure.data.json :as json]
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs]
+   [com.moclojer.components.sentry :as sentry])
+  (:import
+   [redis.clients.jedis JedisPoolConfig JedisPooled JedisPubSub]
+   [redis.clients.jedis.exceptions JedisConnectionException]))
 
-(defprotocol ISubscriber
+(defprotocol IConsumer
   (unarchive-queue! [this conn qname on-msg-fn])
   (subscribe-workers [this conn components workers blocking?])
   (safely-subscribe-workers [this conn pubsub qnames cur-try]))
@@ -37,7 +39,7 @@
           (logs/log :warn "no work handler for queue"
                     :ctx {:qname qname}))))))
 
-(defrecord RedisWorkers [config database storage publisher http workers sentry blocking?]
+(defrecord Consumer [config database storage publisher http workers sentry blocking?]
   component/Lifecycle
   (start [this]
     (logs/log :info "starting redis workers")
@@ -56,7 +58,7 @@
     (update-in this [:pubsub] #(.unsubscribe %))
     (update-in this [:conn] #(.close %)))
 
-  ISubscriber
+  IConsumer
   (unarchive-queue! [_ conn qname on-msg-fn]
     (loop [unarchived-cnt 0]
       (if-let [msg (.rpop conn (str "pending." qname))]
@@ -92,17 +94,14 @@
         (Thread/sleep 1000)
         (safely-subscribe-workers this conn pubsub qnames (inc cur-try))))))
 
-(defn new-redis-queue [workers blocking?]
-  (->RedisWorkers {} {} {} {} {} workers {} blocking?))
-
 (comment
   (def rw
     (component/start
-     (->RedisWorkers {:config {:redis-worker {:uri "redis://localhost:6379"}}}
-                     nil nil nil nil
-                     [{:handler (fn [ev _cmp] (prn :ev ev))
-                       :queue-name "test.test"}]
-                     nil false)))
+     (->Consumer {:config {:redis-worker {:uri "redis://localhost:6379"}}}
+                 nil nil nil nil
+                 [{:handler (fn [ev _cmp] (prn :ev ev))
+                   :queue-name "test.test"}]
+                 nil false)))
 
   (component/stop rw)
 

@@ -1,10 +1,11 @@
-(ns components.webserver
-  (:require [clojure.string :as str]
-            [com.stuartsierra.component :as component]
-            [components.logs :as logs]
-            [io.pedestal.http :as server]
-            [io.pedestal.interceptor.helpers :refer [before on-request]]
-            [reitit.pedestal :as pedestal]))
+(ns com.moclojer.components.webserver
+  (:require
+   [clojure.string :as str]
+   [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component]
+   [io.pedestal.http :as server]
+   [io.pedestal.interceptor.helpers :refer [before on-request]]
+   [reitit.pedestal :as pedestal]))
 
 (defn- add-system [service]
   (before (fn [context] (assoc-in context [:request :components] service))))
@@ -84,6 +85,3 @@
     (server/stop (:webserver this))
     (dissoc this :webserver)
     this))
-
-(defn new-webserver []
-  (map->WebServer {}))

@@ -1,8 +1,8 @@
-(ns components.database
+(ns com.moclojer.components.database
   (:require
    [com.stuartsierra.component :as component]
-   [components.db-utils :refer [to-jdbc-uri]]
-   [components.logs :as logs]
+   [com.moclojer.components.db-utils :refer [to-jdbc-uri]]
+   [com.moclojer.components.logs :as logs]
    [next.jdbc :as jdbc]
    [next.jdbc.connection :as connection])
   (:import
@@ -40,6 +40,3 @@
     (let [ds (:datasource this)
           log-ds (jdbc/with-logging ds db-logger)]
       (jdbc/execute! log-ds commands))))
-
-(defn new-database []
-  (map->Database {}))
