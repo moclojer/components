@@ -29,4 +29,4 @@ Add this to your `deps.edn`:
 
 {:deps
  {com.moclojer/moclojer {:git/url "https://github.com/moclojer/moclojer.git"
-                         :git/sha "will run and fill in"}}}
+                         :git/sha "04aaa7480d04dc4043ea0f8cdf3108e5575d4a10"}}}
