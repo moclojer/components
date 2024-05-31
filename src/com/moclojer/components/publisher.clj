@@ -1,8 +1,8 @@
 (ns com.moclojer.components.publisher
   (:require
    [clojure.data.json :as json]
-   [com.stuartsierra.component :as component]
-   [com.moclojer.components.logs :as logs])
+   [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component])
   (:import
    [redis.clients.jedis JedisPoolConfig JedisPooled]))
 
@@ -18,17 +18,17 @@
 (defrecord Publisher [config jobs sentry]
   component/Lifecycle
   (start [this]
-    (logs/log :info "starting redis publisher")
+    (logs/log :info "starting publisher")
     (let [conn (JedisPooled.
                 (doto (JedisPoolConfig.)
                   (.setTestOnBorrow true))
-                (get-in config [:config :redis-publisher :uri]))
+                (get-in config [:config :mq :uri]))
           conn-this (merge this {:conn conn
                                  :components {:sentry sentry}})
           job-futures (doall (map #(start-job! conn-this %) jobs))]
       (assoc conn-this :job-futures job-futures)))
   (stop [this]
-    (logs/log :info "stopping redis publisher")
+    (logs/log :info "stopping publisher")
     (doseq [job-future (:job-futures this)]
       (future-cancel job-future))
     (update-in this [:conn] #(.close %)))
@@ -52,14 +52,10 @@
         (Thread/sleep delay)
         (recur (inc i))))))
 
-(defn new-redis-publisher
-  ([queue-jobs] (->Publisher {} queue-jobs {}))
-  ([] (->Publisher {} [] {})))
-
 (comment
   (def rp
     (component/start
-     (->Publisher {:config {:redis-publisher {:uri "redis://localhost:6379"}}}
+     (->Publisher {:config {:mq {:uri "redis://localhost:6379"}}}
                   []
                   nil)))
 

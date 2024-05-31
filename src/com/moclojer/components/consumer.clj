@@ -1,9 +1,9 @@
 (ns com.moclojer.components.consumer
   (:require
    [clojure.data.json :as json]
-   [com.stuartsierra.component :as component]
    [com.moclojer.components.logs :as logs]
-   [com.moclojer.components.sentry :as sentry])
+   [com.moclojer.components.sentry :as sentry]
+   [com.stuartsierra.component :as component])
   (:import
    [redis.clients.jedis JedisPoolConfig JedisPooled JedisPubSub]
    [redis.clients.jedis.exceptions JedisConnectionException]))
@@ -46,7 +46,7 @@
     (let [conn (JedisPooled.
                 (doto (JedisPoolConfig.)
                   (.setTestOnBorrow true))
-                (get-in config [:config :redis-worker :uri]))
+                (get-in config [:config :mq :uri]))
           comps {:database  database  :storage storage
                  :publisher publisher :config  config
                  :http      http      :sentry  sentry}
@@ -97,7 +97,7 @@
 (comment
   (def rw
     (component/start
-     (->Consumer {:config {:redis-worker {:uri "redis://localhost:6379"}}}
+     (->Consumer {:config {:mq {:uri "redis://localhost:6379"}}}
                  nil nil nil nil
                  [{:handler (fn [ev _cmp] (prn :ev ev))
                    :queue-name "test.test"}]
