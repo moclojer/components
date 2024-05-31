@@ -1,0 +1,8 @@
+#kaocha/v1
+ {:tests [{:id         :unit
+           :test-paths ["test/"]}]
+  :output   :verbose
+  :color?   true
+  :reporter [kaocha.report/dots]
+  :plugins  [:kaocha.plugin/randomize
+             :kaocha.plugin/capture-output]}

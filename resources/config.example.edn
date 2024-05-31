@@ -1,0 +1,27 @@
+{:webserver/port #long #or [#env PORT 3000]
+ :env #profile {:dev :dev
+                :default :dev
+                :prod :prod}
+ :release "1.0.0"
+ :moclojer {:config-path #profile {:default "resources/moclojer.yml"
+                                   :prod "moclojer.yml"}
+            :join? #profile {:default false
+                             :dev false
+                             :prod true}}
+ :storage {:access-key-id #or [#env AWS_ACCESS_KEY_ID "foo"]
+           :secret-access-key #or [#env AWS_SECRET_ACCESS_KEY "bar"]
+           :region #or [#env AWS_REGION "us-east-1"]
+           :protocol #profile {:dev :http
+                               :default :http
+                               :prod :https}
+           :port #profile {:dev 4566}
+           :host #profile {:dev "localhost"
+                           :default "localhost"
+                           :prod #or [#env STORAGE_HOST "foobar.com"]}}
+ :sentry {:env #profile {:dev "dev"
+                         :prod "prod"
+                         :default "prod"}
+          :dns #or [#env SENTRY_AUTH_TOKEN "foobar"]}
+ :mq  {:uri #or [#env MQ_URL "redis://localhost:6379"]}
+ :database {:dbtype "postgres"
+            :jdbc-url #or [#env DATABASE_URL "postgresql://localhost:5432/postgres?user=postgres&password=postgres"]}}

@@ -12,10 +12,10 @@
    [com.moclojer.components.webserver :as webserver]))
 
 (defn new-config
-  ([]
-   (new-config {}))
-  ([input-map]
-   (config/map->Config {:config (config/read-config input-map)})))
+  ([filepath]
+   (new-config filepath {}))
+  ([filepath input-map]
+   (config/map->Config {:config (config/read-config filepath input-map)})))
 
 (defn new-database []
   (database/map->Database {}))

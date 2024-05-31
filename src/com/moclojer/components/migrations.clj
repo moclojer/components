@@ -1,22 +1,26 @@
-(ns components.migrations
-  (:require [components.config :as config.aero]
-            [components.db-utils :refer [to-jdbc-uri]]
-            [components.logs :as logs]
-            [migratus.core :as migratus]
-            [next.jdbc :as jdbc])
+(ns com.moclojer.components.migrations
+  (:require
+   [com.moclojer.components.config :as config]
+   [com.moclojer.components.db-utils :refer [to-jdbc-uri]]
+   [com.moclojer.components.logs :as logs]
+   [migratus.core :as migratus]
+   [next.jdbc :as jdbc])
   (:gen-class))
 
-(defn get-connection []
-  (let [{:keys [jdbc-url] :as db} (-> (config.aero/read-config {}) :database)]
+(defn get-connection [cfg-filepath]
+  (let [{:keys [jdbc-url] :as db} (:database (config/read-config cfg-filepath {}))]
     (logs/log :info "connecting migrator to db")
     (jdbc/get-connection (assoc db :jdbcUrl (to-jdbc-uri jdbc-url)))))
 
-(def configuration
+(defn build-base-db-config [migration-dir]
   {:store         :database
-   :migration-dir "back/migrations/"})
+   :migration-dir migration-dir})
 
-(defn configuration-with-db []
-  (assoc configuration :db {:connection (get-connection)}))
+(defn build-complete-db-config [cfg-filepath]
+  (assoc (-> (config/read-config cfg-filepath {})
+             :migration-dir
+             build-base-db-config)
+         :db {:connection (get-connection cfg-filepath)}))
 
 (defn init
   [config]
@@ -52,16 +56,17 @@
 
 (defn -main
   [& args]
-  (let [arg (first args)]
-    (cond
-      (= arg "init") (init (configuration-with-db))
-      (= arg "migrate") (migrate (configuration-with-db))
-      (= arg "up") (up (configuration-with-db) (rest args))
-      (= arg "down") (down (configuration-with-db) (rest args))
-      (= arg "create") (create configuration (second args))
-      (= arg "rollback") (rollback (configuration-with-db))
-      (= arg "pending-list") (pending-list (configuration-with-db))
-      (= arg "until-just-before") (migrate-until-just-before (configuration-with-db)
-                                                             (rest args))
-      :else
-      (throw (Exception. (str "Command not found " arg))))))
+  (let [command (first args)
+        args-rest (drop 2 args)]
+    (if (= command "create")
+      (create (build-base-db-config (second args)) (first args-rest))
+      (cond-> (build-complete-db-config (second args))
+        (= command "init")              init
+        (= command "migrate")           migrate
+        (= command "up")                (up args-rest)
+        (= command "down")              (down args-rest)
+        (= command "rollback")          rollback
+        (= command "pending-list")      pending-list
+        (= command "until-just-before") (migrate-until-just-before args-rest)
+        :else #(throw (ex-info (str "Command not found " command)
+                               {:db-config %1}))))))

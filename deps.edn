@@ -1,4 +1,4 @@
-{:paths ["src"]
+{:paths ["resources" "src"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         clj-http/clj-http {:mvn/version "3.12.3"}
         com.zaxxer/HikariCP {:mvn/version "5.0.1"}
@@ -36,12 +36,12 @@
   ;; clj -M:test -n com.moclojer.rq.excel-test
   :test
   {:extra-paths ["test"]
-   :extra-deps {io.github.cognitect-labs/test-runner {:git/tag "v0.5.1"
-                                                      :git/sha "dfb30dd"}
-                clj-kondo/clj-kondo                  {:mvn/version "2023.10.20"}
-                cljfmt/cljfmt                        {:mvn/version "0.9.2"}}
-   :main-opts ["-m" "cognitect.test-runner"]
-   :exec-fn cognitect.test-runner.api/test}
+   :extra-deps {org.clojars.bigsy/pg-embedded-clj {:mvn/version "1.0.0"}
+                lambdaisland/kaocha {:mvn/version "1.70.1086"}
+                lambdaisland/kaocha-cloverage {:mvn/version "1.0.75"}
+                nubank/matcher-combinators {:mvn/version "3.5.1"}
+                nubank/state-flow {:mvn/version "5.14.2"}}
+   :main-opts ["-m" "kaocha.runner" "--no-capture-output"]}
 
   ;; clj -M:nrepl
   :nrepl

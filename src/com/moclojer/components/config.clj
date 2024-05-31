@@ -4,14 +4,16 @@
    [clojure.java.io :as io]
    [com.stuartsierra.component :as component]))
 
-(def ^:private current-profile (keyword (or (System/getenv "PROFILE") "dev")))
+(def ^:private current-profile
+  (keyword (or (System/getenv "PROFILE") "dev")))
 
-(defn- config [profile]
-  (aero/read-config (clojure.java.io/resource "back/config.edn")
+(defn- config [filepath profile]
+  (prn :filepath filepath :resource (io/resource filepath))
+  (aero/read-config (io/resource filepath)
                     {:profile profile}))
 
-(defn read-config [extra-inputs]
-  (merge (config current-profile)
+(defn read-config [filepath extra-inputs]
+  (merge (config filepath current-profile)
          {:env current-profile}
          extra-inputs))
 
