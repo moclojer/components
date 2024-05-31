@@ -8,7 +8,6 @@
   (keyword (or (System/getenv "PROFILE") "dev")))
 
 (defn- config [filepath profile]
-  (prn :filepath filepath :resource (io/resource filepath))
   (aero/read-config (io/resource filepath)
                     {:profile profile}))
 

@@ -53,8 +53,10 @@
 
    (publish-message {:event "test"} "test")
 
-   (state/invoke #(Thread/sleep 1000))
    (flow "sleeping and check the state"
 
-         (match? @state
-                 {:event "test"}))))
+         (match? {:event "test"}
+                 (state/return
+                  (utils/exec-with-timeout
+                   #(deref state)
+                   10000 500))))))

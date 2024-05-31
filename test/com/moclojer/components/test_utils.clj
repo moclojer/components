@@ -17,3 +17,21 @@
   [system]
   (component/stop-system system)
   (pg-emb/halt-pg!))
+
+(defn exec-with-timeout [exec-fn timeout throttle]
+  (let [deadline (+ (System/currentTimeMillis) timeout)]
+    (loop [current-try 0]
+      (Thread/sleep throttle)
+      (if (< (System/currentTimeMillis) deadline)
+        (let [ret (exec-fn)]
+          (prn :current-try current-try
+               :current-ret ret)
+          (or ret (recur (inc current-try))))
+        (throw (ex-info "timeout reached"
+                        {:exec-fn exec-fn
+                         :timeout timeout}))))))
+
+(comment
+  (exec-with-timeout (constantly false) 5000 500)
+  ;;
+  )

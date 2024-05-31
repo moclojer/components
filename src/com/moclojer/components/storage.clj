@@ -3,7 +3,6 @@
    [clojure.java.io :as io]
    [cognitect.aws.client.api :as aws]
    [cognitect.aws.credentials :as cred]
-   [com.moclojer.components.config :as config]
    [com.moclojer.components.logs :as logs]
    [com.stuartsierra.component :as component]))
 
@@ -135,20 +134,14 @@
           \"hello\": \"{{path-params.username}}!\"
         }")
 
-  (def system-map
-    (component/system-map
-     :config (config/new-config)
-     :storage (component/using
-               (new-storage) [:config])))
-
-  (def system-atom (atom {}))
-
-  (->> system-map
-       component/start
-       (reset! system-atom))
-
   (def storage
-    (:storage @system-atom))
+    (component/start
+     (->Storage {:config {:storage {:access-key-id "foo"
+                                    :secret-access-key  "bar"
+                                    :region "us-east-1"
+                                    :protocol :http
+                                    :port 4566
+                                    :host "localhost"}}})))
 
   (create-bucket! storage "moclojer")
 
@@ -179,5 +172,7 @@
   #_(list-buckets storage)
   (create-bucket! storage "moclojer")
   (delete-file! storage "moclojer" "moclojer.yml")
+
+  (component/stop storage)
   ;
   )

@@ -23,7 +23,7 @@
     :config (components/new-config "config.example.edn")
     :database (component/using (components/new-database) [:config]))))
 
-(defflow flow-integration-db-test
+(defflow flow-database-test
   {:init (utils/start-system! create-and-start-system)
    :cleanup utils/stop-system!
    :fail-fast? true}
