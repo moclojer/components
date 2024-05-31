@@ -3,3 +3,4 @@
 /.lsp
 /target
 .nrepl-port
+.envrc
