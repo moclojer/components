@@ -30,5 +30,5 @@ Add this to your `deps.edn`:
 ```clj
 {:deps
  {com.moclojer/components {:git/url "https://github.com/moclojer/components.git"
-                           :git/sha "d8e9935a8fd84575167774298e37145b0c933f73"}}}
+                           :git/sha "2bdde1fc65458b644c6698891c09852bb5b10caa"}}}
 ```
