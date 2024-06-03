@@ -21,7 +21,16 @@ We use stuartsierra's [component](https://github.com/stuartsierra/component) lib
 
 This lib is supposed to be plug & play.
 
-## With Clojars (TODO)
+## With Clojars
+
+Add this to your `deps.edn`:
+
+```clj
+{:deps
+ {com.moclojer/components {:mvn/version "0.0.3"}}}
+
+```
+
 
 ## Github
 
