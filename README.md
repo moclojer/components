@@ -31,7 +31,6 @@ Add this to your `deps.edn`:
 
 ```
 
-
 ## Github
 
 Add this to your `deps.edn`:
@@ -39,5 +38,5 @@ Add this to your `deps.edn`:
 ```clj
 {:deps
  {com.moclojer/components {:git/url "https://github.com/moclojer/components.git"
-                           :git/sha "2bdde1fc65458b644c6698891c09852bb5b10caa"}}}
+                           :git/sha "ad3ba26b129b55d54f004e8b8d3a46f3594e4547"}}}
 ```
