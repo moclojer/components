@@ -21,7 +21,7 @@ We use stuartsierra's [component](https://github.com/stuartsierra/component) lib
 
 This lib is supposed to be plug & play.
 
-## With Clojars
+## Clojars
 
 Add this to your `deps.edn`:
 
@@ -38,5 +38,5 @@ Add this to your `deps.edn`:
 ```clj
 {:deps
  {com.moclojer/components {:git/url "https://github.com/moclojer/components.git"
-                           :git/sha "ad3ba26b129b55d54f004e8b8d3a46f3594e4547"}}}
+                           :git/sha "67f0de264e44d1c3912a9c1d5a86da564d2557d9"}}}
 ```
