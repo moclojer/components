@@ -36,7 +36,7 @@
    (publisher/map->Publisher {:jobs jobs})))
 
 (defn new-publisher-mock []
-  (publisher/map->Publisher {}))
+  (publisher/map->PublisherMock {}))
 
 (defn new-consumer
   [workers blocking?]

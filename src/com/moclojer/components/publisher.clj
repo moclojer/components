@@ -79,7 +79,7 @@
 ;; mock in memory publisher for testing 
 (def mock-publisher (atom {}))
 
-(defrecord MockPublisher [config]
+(defrecord PublisherMock [config]
   component/Lifecycle
   (start [this]
     (assoc this :publish-conn nil))
