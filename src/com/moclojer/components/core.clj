@@ -60,7 +60,5 @@
 (defn new-webserver []
   (webserver/map->WebServer {}))
 
-(defn new-moclojer
-  "Creates a new Moclojer component."
-  []
-  (moclojer/map->Moclojer {}))
+(defn new-moclojer [on-startup-fn]
+  (moclojer/map->Moclojer {:on-startup-fn on-startup-fn}))

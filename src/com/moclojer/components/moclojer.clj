@@ -1,30 +1,25 @@
 (ns com.moclojer.components.moclojer
   (:require
    [com.moclojer.adapters :as m.adapters]
+   [com.moclojer.components.logs :as logs]
    [com.moclojer.io-utils :as m.io-utils]
    [com.moclojer.server :as server]
    [com.stuartsierra.component :as component]
-   [com.moclojer.components.logs :as logs]
-   [io.pedestal.http :as http]
-   [moclojer.api.controllers.moclojer :as moclojer.controller]))
-   [moclojer.api.controllers.moclojer :as moclojer.controller]))
-
-(defn service-startup! [storage config-path]
-  (moclojer.controller/write-on-disk storage config-path))
+   [io.pedestal.http :as http]))
 
 (defn moclojer-server! [{:keys [config-path join?]}]
   (let [*router (m.adapters/generate-routes (m.io-utils/open-file config-path))]
     {:stop-future (server/create-watcher *router {:config-path config-path})
      :server (server/start-server! *router {:join? join?})}))
 
-(defrecord Moclojer [storage config]
+(defrecord Moclojer [storage config on-startup-fn]
   component/Lifecycle
   (start [this]
     (let [{:keys [config-path join?]} (-> config :config :moclojer)]
       (logs/log :info :moclojer-start
                 :info-server {:config-path config-path
                               :join? join?})
-      (service-startup! storage config-path)
+      (on-startup-fn storage config-path)
       (assoc this :moclojer
              (moclojer-server!
               {:config-path config-path
