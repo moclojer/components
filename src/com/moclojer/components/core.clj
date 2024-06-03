@@ -5,6 +5,7 @@
    [com.moclojer.components.database  :as database]
    [com.moclojer.components.http      :as http]
    [com.moclojer.components.logs      :as logs]
+   [com.moclojer.components.moclojer  :as moclojer]
    [com.moclojer.components.publisher :as publisher]
    [com.moclojer.components.router    :as router]
    [com.moclojer.components.sentry    :as sentry]
@@ -58,3 +59,8 @@
 
 (defn new-webserver []
   (webserver/map->WebServer {}))
+
+(defn new-moclojer
+  "Creates a new Moclojer component."
+  []
+  (moclojer/map->Moclojer {}))
