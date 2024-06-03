@@ -1,11 +1,13 @@
 (ns com.moclojer.components.moclojer
-  (:require [com.moclojer.adapters :as m.adapters]
-            [com.moclojer.io-utils :as m.io-utils]
-            [com.moclojer.server :as server]
-            [com.stuartsierra.component :as component]
-            [components.logs :as logs]
-            [moclojer.api.controllers.moclojer :as moclojer.controller]
-            [io.pedestal.http :as http]))
+  (:require
+   [com.moclojer.adapters :as m.adapters]
+   [com.moclojer.io-utils :as m.io-utils]
+   [com.moclojer.server :as server]
+   [com.stuartsierra.component :as component]
+   [com.moclojer.components.logs :as logs]
+   [io.pedestal.http :as http]
+   [moclojer.api.controllers.moclojer :as moclojer.controller]))
+   [moclojer.api.controllers.moclojer :as moclojer.controller]))
 
 (defn service-startup! [storage config-path]
   (moclojer.controller/write-on-disk storage config-path))
