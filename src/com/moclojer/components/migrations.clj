@@ -57,16 +57,18 @@
 (defn -main
   [& args]
   (let [command (first args)
-        args-rest (drop 2 args)]
-    (if (= command "create")
-      (create (build-base-db-config (second args)) (first args-rest))
-      (cond-> (build-complete-db-config (second args))
-        (= command "init")              init
-        (= command "migrate")           migrate
-        (= command "up")                (up args-rest)
-        (= command "down")              (down args-rest)
-        (= command "rollback")          rollback
-        (= command "pending-list")      pending-list
-        (= command "until-just-before") (migrate-until-just-before args-rest)
-        :else #(throw (ex-info (str "Command not found " command)
-                               {:db-config %1}))))))
+        cfg-filepath (second args)
+        args-rest (drop 2 args)
+        cmd-args (into args-rest [(build-complete-db-config cfg-filepath)])]
+    (apply (case command
+             "create"            create
+             "up"                up
+             "down"              down
+             "until-just-before" migrate-until-just-before
+             "init"              init
+             "migrate"           migrate
+             "rollback"          rollback
+             "pending-list"      pending-list
+             (throw (ex-info (str "command not found " command)
+                             {:cmd-args cmd-args})))
+           cmd-args)))
