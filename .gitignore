@@ -1,6 +1,23 @@
-/.clj-kondo
-/.cpcache
-/.lsp
-/target
+pom.xml
+pom.xml.asc
+*.pom.asc
+*.jar
+*.class
+/lib/
+/classes/
+/target/
+/checkouts/
+.lein-deps-sum
+.lein-repl-history
+.lein-plugins/
+.lein-failures
 .nrepl-port
+.cpcache/
+**/.lsp/.cache
+/.clj-kondo/.cache
+/.calva/output-window
+output.calva-repl
+# emacs
+*~
+/.clj-kondo
 .envrc
