@@ -1,8 +1,8 @@
 (ns com.moclojer.components.router
   (:require
-   [com.stuartsierra.component :as component]
    [com.moclojer.components.logs :as logs]
    [com.moclojer.components.sentry :as sentry]
+   [com.stuartsierra.component :as component]
    [muuntaja.core :as m]
    [reitit.coercion.malli :as reitit.malli]
    [reitit.dev.pretty :as pretty]

@@ -2,8 +2,8 @@
   (:require
    [clj-http.client :as http]
    [clj-http.util :as http-util]
-   [com.stuartsierra.component :as component]
-   [com.moclojer.components.logs :as logs]))
+   [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component]))
 
 (defn request-fn
   "Accepts :req which should be a map containing the following keys:
@@ -25,9 +25,9 @@
 
 (defprotocol HttpProvider
   (request
-    [this request-input])
+    [this request-input ctx])
   (request-or-throw
-    [this req expected-status]))
+    [this req expected-status ctx]))
 
 (defrecord Http [_]
   component/Lifecycle
@@ -36,39 +36,39 @@
 
   HttpProvider
   (request
-    [_ {:keys [method url] :as request-input}]
+    [_ {:keys [method url] :as request-input} ctx]
     (logs/log :info "sending http request"
-              :ctx {:method method
-                    :url url})
+              :ctx (merge ctx {:method method
+                               :url url}))
     (let [start-time (System/currentTimeMillis)
           {:keys [status] :as response} (request-fn request-input)
           end-time (System/currentTimeMillis)
           total-time (- end-time start-time)]
       (logs/log :info "received http response"
-                :ctx {:response-time-millis total-time
-                      :status status})
+                :ctx (merge ctx {:response-time-millis total-time
+                                 :status status}))
       response))
   (request-or-throw
-    [this req expected-status]
-    (let [{:keys [status] :as resp} (request this req)]
+    [this req expected-status ctx]
+    (let [{:keys [status] :as resp} (request this req ctx)]
       (if (= status expected-status)
         resp
         (do
           (logs/log :error "failed critical request. throwing..."
-                    :ctx {:url (:url req)
-                          :status status
-                          :expected-status expected-status})
+                    :ctx (merge ctx {:url (:url req)
+                                     :status status
+                                     :expected-status expected-status}))
           (throw (ex-info "failed critical request"
-                          {:status status
-                           :expected-status expected-status
-                           :req req
-                           :resp resp})))))))
+                          (merge ctx {:status status
+                                      :expected-status expected-status
+                                      :req req
+                                      :resp resp}))))))))
 
 (comment
   (def hp (component/start (->Http {})))
 
   (request hp {:url "https://google.com"
-               :method :get})
+               :method :get} {})
 
   (component/stop hp)
   ;;
@@ -82,7 +82,7 @@
 
   HttpProvider
   (request
-    [this req]
+    [this req ctx]
 
     (let [mreq (select-keys req [:method :url])
           resp (-> #(= mreq (select-keys % (keys mreq)))
@@ -91,26 +91,26 @@
                    (or {:status 500
                         :body "mocked response not set"}))]
       (logs/log :info "sending http request"
-                :ctx mreq)
+                :ctx (merge ctx mreq))
 
       (assoc
        (if (fn? resp) (resp req) resp)
        :instant (System/currentTimeMillis))))
   (request-or-throw
-    [this req expected-status]
-    (let [{:keys [status] :as resp} (request this req)]
+    [this req expected-status ctx]
+    (let [{:keys [status] :as resp} (request this req ctx)]
       (if (= status expected-status)
         resp
         (do
           (logs/log :error "failed critical request. throwing..."
-                    :ctx {:url (:url req)
-                          :status status
-                          :expected-status expected-status})
+                    :ctx (merge ctx {:url (:url req)
+                                     :status status
+                                     :expected-status expected-status}))
           (throw (ex-info "failed critical request"
-                          {:status status
-                           :expected-status expected-status
-                           :req req
-                           :resp resp})))))))
+                          (merge ctx {:status status
+                                      :expected-status expected-status
+                                      :req req
+                                      :resp resp}))))))))
 
 (comment
   (def m (component/start
@@ -125,13 +125,13 @@
                                     {:status 200
                                      :body (:body req)})}])))
 
-  (request m {:url "https://test.com"})
+  (request m {:url "https://test.com"} {})
   ;; => {:status 200
   ;;     :body "hello world"
   ;;     :instant 1715218184868}
 
   (request m {:url "https://test.com"
               :method :put
-              :body "hello"})
+              :body "hello"} {})
   ;;
   )

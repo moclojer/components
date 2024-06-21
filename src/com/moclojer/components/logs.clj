@@ -1,9 +1,10 @@
 (ns com.moclojer.components.logs
-  (:require [clojure.string :as str]
-            [taoensso.timbre :as timbre]
-            [taoensso.timbre.appenders.core :as core-appenders]
-            [timbre-json-appender.core :as tas])
-  (:import [java.util.logging Filter Handler Logger]))
+  (:require
+   [taoensso.timbre :as timbre]
+   [taoensso.timbre.appenders.core :as core-appenders]
+   [timbre-json-appender.core :as tas])
+  (:import
+   [java.util.logging Filter Handler Logger]))
 
 (defn clean-dep-logs
   "clean logs on prod that are not from our application"
@@ -50,6 +51,9 @@
 
 (defmacro log [level & args]
   `(timbre/log ~level ~@args))
+
+(defn gen-ctx-with-cid []
+  {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
 
 (comment
   (setup [["*" :info]] :auto :prod)

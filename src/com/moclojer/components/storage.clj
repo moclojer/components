@@ -16,8 +16,8 @@
   (get-file [this bucket-name filename])
   (list-files [this bucket-name])
   (upload!
-    [this bucket-name k value]
-    [this bucket-name k value cp]))
+    [this bucket-name k value ctx]
+    [this bucket-name k value cp ctx]))
 
 (defn assoc-if [m k v]
   (if v
@@ -78,19 +78,15 @@
                      :request {:Bucket bucket-name}})
         :Contents))
 
-  (upload! [this bucket-name filename value]
-    (logs/log :info "uploading to storage"
-              :ctx {:bucket bucket-name
-                    :filename filename
-                    :value value})
-    (upload! this bucket-name filename value "application/yml"))
+  (upload! [this bucket-name filename value ctx]
+    (upload! this bucket-name filename value "application/yml" ctx))
 
-  (upload! [this bucket-name filename value content-type]
+  (upload! [this bucket-name filename value content-type ctx]
     (logs/log :info "uploading to storage"
-              :ctx {:bucket bucket-name
-                    :filename filename
-                    :content-type content-type
-                    :value value})
+              :ctx (merge ctx {:bucket bucket-name
+                               :filename filename
+                               :content-type content-type
+                               :value value}))
     (-> (-> this :storage)
         (aws/invoke {:op :PutObject
                      :Content-Type content-type

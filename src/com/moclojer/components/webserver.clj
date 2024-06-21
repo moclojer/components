@@ -23,11 +23,10 @@
    ::log-request
    (fn [req]
      (logs/log
-      :info (str (str/upper-case (:request-method req))
+      :info (str (str/lower-case (:request-method req))
                  " "
                  (:uri req))
-      :ctx {:query (:query-string req)})
-
+      :ctx req)
      req)))
 
 (defn base-service [port]
