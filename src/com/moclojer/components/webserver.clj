@@ -18,6 +18,19 @@
              [::server/interceptors]
              #(vec (->> % (cons (add-system service))))))
 
+(defn cid-interceptor
+  "Extends incoming request with CID if not given already"
+  [service-map]
+  (update-in service-map
+             [::server/interceptors]
+             #(vec
+               (cons %
+                     (before
+                      (fn [ctx]
+                        (assoc-in ctx [:request :ctx]
+                                  {:cid (get-in ctx [:request :headers "cid"]
+                                                (:cid (logs/gen-ctx-with-cid)))})))))))
+
 (def req-logger
   (on-request
    ::log-request
@@ -26,7 +39,8 @@
       :info (str (str/lower-case (:request-method req))
                  " "
                  (:uri req))
-      :ctx req)
+      :ctx (apply dissoc req [:body :components :servlet :servlet-request
+                              :servlet-response]))
      req)))
 
 (defn base-service [port]
@@ -76,6 +90,7 @@
              (-> (base-service port)
                  (init-fn (:router router))
                  (system-interceptors this)
+                 (cid-interceptor)
                  (server/create-server)
                  (server/start)))))
 
