@@ -4,7 +4,7 @@
    [clojure.string :as string]
    [clojure.tools.build.api :as b]))
 
-(def version "0.0.3")
+(def version "0.0.4")
 
 (def class-dir "target/classes")
 (def jar-file "target/com.moclojer.components.jar")
