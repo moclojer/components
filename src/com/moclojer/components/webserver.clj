@@ -1,5 +1,6 @@
 (ns com.moclojer.components.webserver
   (:require
+   [clojure.pprint :refer [pprint]]
    [clojure.string :as str]
    [com.moclojer.components.logs :as logs]
    [com.stuartsierra.component :as component]
@@ -23,22 +24,18 @@
   [service-map]
   (update-in service-map
              [::server/interceptors]
-             #(vec
-               (cons %
-                     (before
-                      (fn [ctx]
-                        (assoc-in ctx [:request :ctx]
-                                  {:cid (get-in ctx [:request :headers "cid"]
-                                                (:cid (logs/gen-ctx-with-cid)))})))))))
+             #(conj % (before
+                       (fn [ctx]
+                         (assoc-in ctx [:request :ctx]
+                                   {:cid (get-in ctx [:request :headers "cid"]
+                                                 (:cid (logs/gen-ctx-with-cid)))}))))))
 
 (def req-logger
   (on-request
    ::log-request
    (fn [req]
      (logs/log
-      :info (str (str/lower-case (:request-method req))
-                 " "
-                 (:uri req))
+      :info (str (str/lower-case (name (:request-method req))) " " (:uri req))
       :ctx (apply dissoc req [:body :components :servlet :servlet-request
                               :servlet-response]))
      req)))
@@ -89,8 +86,8 @@
       (assoc this :webserver
              (-> (base-service port)
                  (init-fn (:router router))
-                 (system-interceptors this)
                  (cid-interceptor)
+                 (system-interceptors this)
                  (server/create-server)
                  (server/start)))))
 
