@@ -1,12 +1,11 @@
 (ns com.moclojer.components.core
   (:require
    [com.moclojer.components.config    :as config]
-   [com.moclojer.components.consumer  :as consumer]
    [com.moclojer.components.database  :as database]
    [com.moclojer.components.http      :as http]
    [com.moclojer.components.logs      :as logs]
    [com.moclojer.components.moclojer  :as moclojer]
-   [com.moclojer.components.publisher :as publisher]
+   [com.moclojer.components.mq        :as mq]
    [com.moclojer.components.router    :as router]
    [com.moclojer.components.sentry    :as sentry]
    [com.moclojer.components.storage   :as storage]
@@ -30,19 +29,16 @@
 
 (def setup-logger logs/setup)
 
-(defn new-publisher
-  ([]
-   (new-publisher []))
-  ([jobs]
-   (publisher/map->Publisher {:jobs jobs})))
+(defn new-mq
+  ([workers]
+   (new-mq workers []))
+  ([workers jobs]
+   (mq/map->MQ {:workers workers
+                :jobs jobs})))
 
-(defn new-publisher-mock []
-  (publisher/map->PublisherMock {}))
-
-(defn new-consumer
-  [workers blocking?]
-  (consumer/map->Consumer {:workers workers
-                           :blocking? blocking?}))
+(defn new-mq-mock
+  []
+  (mq/map->MQMock {}))
 
 (defn new-router
   [routes]
