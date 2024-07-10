@@ -11,10 +11,10 @@
 (defn execute!
   [commands]
   (flow "makes database execution"
-        [database (state-flow.api/get-state :database)]
-        (-> database
-            (database/execute commands)
-            state-flow.api/return)))
+    [database (state-flow.api/get-state :database)]
+    (-> database
+        (database/execute commands {})
+        state-flow.api/return)))
 
 (defn- create-and-start-system
   []
@@ -29,10 +29,10 @@
    :fail-fast? true}
 
   (flow "creates a table and insert a row and retreive"
-        (execute! ["CREATE TABLE test (id SERIAL PRIMARY KEY, name VARCHAR(255))"])
+    (execute! ["CREATE TABLE test (id SERIAL PRIMARY KEY, name VARCHAR(255))"])
 
-        (execute! ["INSERT INTO test (name) VALUES ('test')"])
+    (execute! ["INSERT INTO test (name) VALUES ('test')"])
 
-        (match? [#:test {:name "test"
-                         :id 1}]
-                (execute! ["SELECT * FROM test"]))))
+    (match? [#:test {:name "test"
+                     :id 1}]
+            (execute! ["SELECT * FROM test"]))))
