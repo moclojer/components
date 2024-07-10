@@ -1,7 +1,7 @@
 {:paths ["resources" "src"]
  :deps {org.clojure/clojure {:mvn/version "1.11.1"}
         com.moclojer/moclojer {:mvn/version "0.3.2"}
-        com.moclojer/rq {:mvn/version "0.1.2"}
+        com.moclojer/rq {:mvn/version "0.1.3"}
         clj-http/clj-http {:mvn/version "3.12.3"}
         com.zaxxer/HikariCP {:mvn/version "5.0.1"}
         com.stuartsierra/component {:mvn/version "1.1.0"}
