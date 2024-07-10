@@ -21,17 +21,17 @@
    :cleanup utils/stop-system!
    :fail-fast? true}
   (flow
-   "should create a file on storage and read it back"
-   [storage (get-state :storage)]
-   (state/invoke #(storage/create-bucket! storage "test"))
-   (state/invoke #(do
+    "should create a file on storage and read it back"
+    [storage (get-state :storage)]
+    (state/invoke #(storage/create-bucket! storage "test"))
+    (state/invoke #(do
                     ;; wait for bucket creation
-                    (Thread/sleep 1000)
-                    (storage/upload! storage "test" "test.txt" "hello world!")))
-   (match? "hello world!"
-           (state/return
-            (utils/exec-with-timeout
-             #(some-> (storage/get-file storage "test" "test.txt")
-                      io/reader
-                      slurp)
-             10000 500)))))
+                     (Thread/sleep 1000)
+                     (storage/upload! storage "test" "test.txt" "hello world!" {})))
+    (match? "hello world!"
+            (state/return
+             (utils/exec-with-timeout
+              #(some-> (storage/get-file storage "test" "test.txt")
+                       io/reader
+                       slurp)
+              10000 500)))))
