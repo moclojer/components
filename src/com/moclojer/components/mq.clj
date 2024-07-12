@@ -50,22 +50,22 @@
   component/Lifecycle
   (start [this]
     (logs/log :info "starting mq")
-    (let [components {:config config
+    (let [client (rq/create-client (get-in config [:config :mq :uri]))
+          base-this (assoc this :client client)
+          components {:config config
                       :database database
                       :storage storage
                       :http http
-                      :sentry sentry}
-          client (rq/create-client (get-in config [:config :mq :uri]))
+                      :sentry sentry
+                      :mq base-this}
           wrapped-workers (map #(wrap-worker % components sentry) workers)
           subs (rq-pubsub/subscribe! client wrapped-workers :blocking? blocking?)]
 
       (doseq [job jobs]
-        (start-job! (assoc this :client client) job))
+        (start-job! base-this job))
 
-      (merge this {:client client
-                   :subs subs
-                   :jobs jobs
-                   :components components})))
+      (merge this (assoc base-this :components components)
+             {:subs subs :jobs jobs})))
   (stop [this]
     (logs/log :info "stopping mq")
     (when-let [?client (:client this)]

@@ -47,15 +47,23 @@
   {:init (utils/start-system! create-and-start-system)
    :cleanup utils/stop-system!
    :fail-fast? true}
-  #_(flow
-      "should publish and consume a message"
-      (publish-message {:event "test"} "test")
-      (flow "sleeping and check the state"
-        (match? {:event "test"}
-                (state/return
-                 (utils/exec-with-timeout
-                  #(deref state)
-                  10000 500)))))
+
+  (flow
+    "should have itself in the components"
+    [mq (state-flow.api/get-state :mq)]
+    (match?
+     (get-in mq [:components :mq :client])
+     (:client mq)))
+
+  (flow
+    "should publish and consume a message"
+    (publish-message {:event "test"} "test")
+    (flow "sleeping and check the state"
+      (match? {:event "test"}
+              (state/return
+               (utils/exec-with-timeout
+                #(deref state)
+                10000 500)))))
   (flow
     "should trigger a job 2 times within 5.5 seconds"
     [:let [job {:channel "test-job"
