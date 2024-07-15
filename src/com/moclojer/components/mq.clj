@@ -102,7 +102,7 @@
               (Thread/sleep sleep)
               (recur (inc attempt)))))))))
 
-(defonce mock-channels (atom {}))
+(def mock-channels (atom {}))
 
 (defn mock-op-name->op-fn
   "Adapts given mq `operation name` to its relative function."
