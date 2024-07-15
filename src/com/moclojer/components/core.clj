@@ -30,11 +30,12 @@
 (def setup-logger logs/setup)
 
 (defn new-mq
-  ([workers]
-   (new-mq workers []))
-  ([workers jobs]
+  ([workers blocking?]
+   (new-mq workers [] blocking?))
+  ([workers jobs blocking?]
    (mq/map->MQ {:workers workers
-                :jobs jobs})))
+                :jobs jobs
+                :blocking? blocking?})))
 
 (defn new-mq-mock
   []
