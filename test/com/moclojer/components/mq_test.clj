@@ -39,7 +39,8 @@
     :mq (component/using (components/new-mq [{:handler fake-worker
                                               :channel "test"}
                                              {:handler job-worker
-                                              :channel "test-job"}])
+                                              :channel "test-job"}]
+                                            false)
                          [:config :database :storage :sentry])
     :storage (component/using (components/new-storage) [:config]))))
 
