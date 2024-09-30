@@ -4,8 +4,7 @@
    [com.moclojer.components.logs :as logs]
    [com.moclojer.io-utils :as m.io-utils]
    [com.moclojer.server :as server]
-   [com.stuartsierra.component :as component]
-   [io.pedestal.http :as http]))
+   [com.stuartsierra.component :as component]))
 
 (defn moclojer-server! [{:keys [config-path join?]}]
   (let [*router (m.adapters/generate-routes (m.io-utils/open-file config-path))]
@@ -28,5 +27,5 @@
   (stop [this]
     (let [stop-fn (-> this :moclojer :stop-future)]
       (stop-fn)
-      (http/stop (-> this :moclojer :server))
+      (.stop (-> this :moclojer :server))
       (assoc this :moclojer nil))))

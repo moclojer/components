@@ -43,7 +43,7 @@
 
 (defn new-router
   [routes]
-  (router/map->Router {:router (router/router routes)}))
+  (router/map->Router {:routes routes}))
 
 (defn new-sentry []
   (sentry/map->Sentry {}))
