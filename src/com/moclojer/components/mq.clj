@@ -2,6 +2,7 @@
   (:require
    [com.moclojer.components.logs :as logs]
    [com.moclojer.components.sentry :as sentry]
+   [com.moclojer.rq.queue]
    [com.moclojer.rq :as rq]
    [com.moclojer.rq.pubsub :as rq-pubsub]
    [com.stuartsierra.component :as component]))

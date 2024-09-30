@@ -5,3 +5,15 @@ services:
       - "6379:6379"
     volumes:
       - ./redis:/redis
+  # https://docs.localstack.cloud/user-guide/aws/s3/#s3-docker-image
+  localstack:
+    image: localstack/localstack:s3-latest
+    ports:
+      - "127.0.0.1:4566:4566" # Gateway
+    environment:
+      - AWS_ACCESS_KEY_ID="foo"
+      - AWS_SECRET_ACCESS_KEY="bar"
+      - AWS_DEFAULT_REGION=us-east-1
+      - DEBUG=${DEBUG:-1}
+    volumes:
+      - "${LOCALSTACK_DIR:-./localstack}:/var/lib/localstack"

@@ -1,19 +1,17 @@
 (ns com.moclojer.components.router
   (:require
+   [clojure.string :as str]
    [com.moclojer.components.logs :as logs]
    [com.moclojer.components.sentry :as sentry]
    [com.stuartsierra.component :as component]
    [muuntaja.core :as m]
    [reitit.coercion.malli :as reitit.malli]
    [reitit.dev.pretty :as pretty]
-   [reitit.http :as http]
-   [reitit.http.coercion :as coercion]
-   [reitit.http.interceptors.exception :as exception]
-   [reitit.http.interceptors.multipart :as multipart]
-   [reitit.http.interceptors.muuntaja :as muuntaja]
-   [reitit.http.interceptors.parameters :as parameters]
-   [reitit.pedestal :as pedestal]
    [reitit.ring :as ring]
+   [reitit.ring.coercion :as coercion]
+   [reitit.ring.middleware.multipart :as multipart]
+   [reitit.ring.middleware.muuntaja :as muuntaja]
+   [reitit.ring.middleware.parameters :as parameters]
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]))
 
@@ -22,71 +20,80 @@
     (sentry/send-event! sentry-cmp {:throwable ex})
     (logs/log :error "failed to send sentry event (nil component)")))
 
-(defn- coercion-error-handler [status]
-  (fn [exception request]
-    (logs/log :error "failed to coerce req/resp"
-              :ctx {:ex-message (.getMessage exception)
-                    :coercion (:errors (ex-data exception))})
-    (send-sentry-evt-from-req! request exception)
-    {:status status
-     :body (if (= 400 status)
-             (str "Invalid path or request parameters, with the following errors: "
-                  (:errors (ex-data exception)))
-             "Error checking path or request parameters.")}))
+(defn exception-middleware
+  [handler-fn]
+  (fn [request]
+    (try
+      (handler-fn request)
+      (catch Exception e
+        (logs/log :error (.getMessage e)
+                  :ctx {:exception e})
+        (send-sentry-evt-from-req! request e)
+        {:status 500
+         :body (.getMessage e)}))))
 
-(defn- exception-info-handler [exception request]
-  (logs/log :error "server exception"
-            :ctx {:ex-message (.getMessage exception)})
-  (send-sentry-evt-from-req! request exception)
-  {:status 500
-   :body   "Internal error."})
+(defn log-request-middleware
+  [handler-fn]
+  (fn [request]
+    (let [method (str/upper-case (name (:request-method request)))]
+      (logs/log :info (str method " " (:uri request))
+                :ctx {:method method
+                      :host (:server-name request)
+                      :uri (:uri request)
+                      :query-string (:query-string request)})
+      (handler-fn request))))
 
-(def router-settings
-  {;:reitit.interceptor/transform dev/print-context-diffs ;; pretty context diffs
-   ;;:validate spec/validate ;; enable spec validation for route data
-   ;;:reitit.spec/wrap spell/closed ;; strict top-level validation
-   :exception pretty/exception
+(defn cid-middleware
+  "Extends incoming request with CID if not given already"
+  [handler-fn]
+  (fn [request]
+    (->> {:cid (get-in request [:headers "cid"]
+                       (:cid (logs/gen-ctx-with-cid)))}
+         (assoc request :ctx)
+         (handler-fn))))
+
+(defn build-components-middleware
+  [components]
+  (fn [handler-fn]
+    (fn [request]
+      (handler-fn (assoc request :components components)))))
+
+(defn build-router-settings
+  [components]
+  {:exception pretty/exception
    :data {:coercion reitit.malli/coercion
           :muuntaja (m/create
                      (-> m/default-options
-                         (assoc-in [:formats "application/json" :decoder-opts :bigdecimals] true)))
-          :interceptors [;; swagger feature
-                         swagger/swagger-feature
-                         ;; query-params & form-params
-                         (parameters/parameters-interceptor)
-                         ;; content-negotiation
-                         (muuntaja/format-negotiate-interceptor)
-                         ;; encoding response body
-                         (muuntaja/format-response-interceptor)
-                         ;; exception handling
-                         (exception/exception-interceptor
-                          (merge
-                           exception/default-handlers
-                           {:reitit.coercion/request-coercion  (coercion-error-handler 400)
-                            :reitit.coercion/response-coercion (coercion-error-handler 500)
-                            clojure.lang.ExceptionInfo exception-info-handler}))
-                             ;; decoding request body
-                         (muuntaja/format-request-interceptor)
-                             ;; coercing response bodys
-                         (coercion/coerce-response-interceptor)
-                             ;; coercing request parameters
-                         (coercion/coerce-request-interceptor)
-                             ;; multipart
-                         (multipart/multipart-interceptor)]}})
+                         (assoc-in [:formats "application/json"
+                                    :decoder-opts :bigdecimals]
+                                   true)))
+          :middleware [(build-components-middleware components)
+                       log-request-middleware
+                       cid-middleware
+                       exception-middleware
+                       swagger/swagger-feature
+                       parameters/parameters-middleware
+                       muuntaja/format-negotiate-middleware
+                       muuntaja/format-response-middleware
+                       muuntaja/format-request-middleware
+                       coercion/coerce-response-middleware
+                       coercion/coerce-request-middleware
+                       multipart/multipart-middleware]}})
 
-(defn router [routes]
-  (pedestal/routing-interceptor
-   (http/router routes router-settings)
-   ;; optional default ring handler (if no routes have matched)
-   (ring/routes
-    (swagger-ui/create-swagger-ui-handler
-     {:path "/"
-      :config {:validatorUrl nil
-               :operationsSorter "alpha"}})
-    (ring/create-resource-handler)
-    (ring/create-default-handler))))
-
-(defrecord Router [router]
+(defrecord Router [routes]
   component/Lifecycle
-  (start [this] this)
-  (stop  [this] this))
+  (start [this]
+    (assoc this :router
+           (ring/ring-handler
+            (ring/router
+             routes
+             (build-router-settings this))
+            (ring/routes
+             (swagger-ui/create-swagger-ui-handler
+              {:path "/"
+               :config {:validatorUrl nil
+                        :operationsSorter "alpha"}})
+             (ring/create-resource-handler)
+             (ring/create-default-handler)))))
+  (stop [this]
+    (dissoc this :router)))
