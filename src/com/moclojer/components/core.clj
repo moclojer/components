@@ -27,8 +27,6 @@
   [responses]
   (http/map->HttpMock {:responses responses}))
 
-(def setup-logger logs/setup)
-
 (defn new-mq
   ([workers blocking?]
    (new-mq workers [] blocking?))

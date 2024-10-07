@@ -22,6 +22,10 @@
                          :prod "prod"
                          :default "prod"}
           :dns #or [#env SENTRY_AUTH_TOKEN "foobar"]}
+ :opensearch {:username #or [#env OPENSEARCH_USERNAME "foobar"]
+              :password #or [#env OPENSEARCH_PASSWORD "foobar"]
+              :host #or [#env OPENSEARCH_HOST "foobar.com"]
+              :port #or [#env OPENSEARCH_PORT 00000]}
  :mq  {:uri #or [#env MQ_URL "redis://localhost:6379"]}
  :database {:dbtype "postgres"
             :jdbc-url #or [#env DATABASE_URL "postgresql://localhost:5432/postgres?user=postgres&password=postgres"]}}

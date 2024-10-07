@@ -1,53 +1,86 @@
 (ns com.moclojer.components.logs
   (:require
-   [taoensso.timbre :as timbre]
-   [taoensso.timbre.appenders.core :as core-appenders]
-   [timbre-json-appender.core :as tas])
-  (:import
-   [java.util.logging Filter Handler Logger]))
+   [clojure.data.json :as json]
+   [clj-http.client :as http-client]
+   [taoensso.telemere :as t]
+   [taoensso.telemere.timbre :as timbre])
+  (:import (java.util.concurrent TimeoutException TimeUnit)))
 
-(defn clean-dep-logs
-  "clean logs on prod that are not from our application"
-  []
-  (doseq [^Handler handler (.. (Logger/getGlobal)
-                               getParent
-                               getHandlers)]
-    (.setFilter
-     handler
-     (reify Filter
-       (isLoggable [_ record]
-         (if-let [^String logger-name (.getLoggerName record)]
-           (not-any? #(.contains logger-name %)
-                     ["jetty" "hikari" "pedestal" "migratus"])
-           ;; returning false explicitly so Java interop doesn't
-           ;; bugout for some reason in the future.
-           false))))))
+(defn build-opensearch-base-req
+  [config]
+  (let [{:keys [username password host port]} config
+        url (str "https://" host ":" port "/_bulk")]
+    {:method :post
+     :url url
+     :async? true
+     :basic-auth [username password]
+     :content-type :json
+     :body (json/write-str {:index {:_index "logs"}})}))
 
-(defn clean-timbre-appenders []
-  (->> (reduce-kv
-        (fn [acc k _]
-          (assoc acc k nil))
-        {} (:appenders timbre/*config*))
-       (assoc nil :appenders)
-       timbre/merge-config!))
+(defn ->str-values
+  [m]
+  (reduce-kv
+   (fn [acc k v]
+     (assoc acc k (cond
+                    (map? v) (->str-values v)
+                    (string? v) (identity v)
+                    :else (pr-str v))))
+   {} m))
 
-(defn setup [level stream env]
-  (clean-timbre-appenders)
-  (let [prod? (= env :prod)
-        ns-filter (when prod?
-                    #{"components.*" "back.api.*"
-                      "yaml-generator.*" "cloud-ops.api.*"})
-        appenders (if prod?
-                    (tas/install)
-                    {:appenders
-                     {:println
-                      (core-appenders/println-appender
-                       {:stream stream})}})]
-    (when prod? (clean-dep-logs))
-    (timbre/merge-config!
-     (merge appenders
-            {:min-level level
-             :ns-filter ns-filter}))))
+(defn send-opensearch-signal-req
+  [base-req signal]
+  (let [log (-> (select-keys signal [:level :ctx :data
+                                     :msg_ :error :thread
+                                     :uid :inst])
+                (->str-values)
+                (json/write-str))
+        future (http-client/request
+                (update
+                 base-req :body
+                 str \newline log \newline)
+                identity #(throw ^Exception %))]
+    (try
+      (.get future 1 TimeUnit/SECONDS)
+      (catch TimeoutException _
+        (.cancel future true)))))
+
+(defn setup [config level env]
+  (let [prod? (= env "prod")
+        os-cfg (when prod? (:opensearch config))
+        os-base-req (build-opensearch-base-req os-cfg)]
+    (t/set-min-level! level)
+    (t/set-ns-filter! {:disallow "*" :allow "com.moclojer.*"})
+    (when prod?
+      (telemere/add-signal!
+       :opensearch
+       (fn [signal])))))
+
+(comment
+  (def my-signal
+    (t/with-signal
+      (t/log! {:level :info
+               :data {:hello true
+                      :time "hello world"}}
+              "hello")))
+
+  (def base-req
+    (build-opensearch-base-req
+     {:username "foobar"
+      :password "foobar"
+      :host "foobar"
+      :port 25060}))
+
+  (send-opensearch-signal-req base-req my-signal)
+
+  (http-client/request
+   (update
+    base-req :body
+    str
+    \newline
+    (json/write-str my-signal)
+    \newline))
+  ;;
+  )
 
 (defmacro log [level & args]
   `(timbre/log ~level ~@args))
@@ -56,7 +89,8 @@
   {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
 
 (comment
-  (setup [["*" :info]] :auto :prod)
+  (setup :dev)
+
   (log :info :world)
   ;;
   )
