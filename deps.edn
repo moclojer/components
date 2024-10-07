@@ -1,5 +1,6 @@
 {:paths ["resources" "src"]
  :deps  {org.clojure/clojure                   {:mvn/version "1.11.1"}
+         org.clojure/core.async                {:mvn/version "1.6.681"}
          com.moclojer/moclojer                 {:mvn/version "0.3.2"}
          com.moclojer/rq                       {:mvn/version "0.1.4"}
          clj-http/clj-http                     {:mvn/version "3.12.3"}
