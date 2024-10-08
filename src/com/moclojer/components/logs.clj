@@ -6,16 +6,6 @@
    [taoensso.telemere :as t])
   (:import [clojure.core.async.impl.channels ManyToManyChannel]))
 
-(defn build-opensearch-base-req
-  [config]
-  (let [{:keys [username password host port]} config
-        url (str "https://" host ":" port "/_bulk")]
-    {:method :post
-     :url url
-     :basic-auth [username password]
-     :content-type :json
-     :body (json/write-str {:index {:_index "logs"}})}))
-
 (defn ->str-values
   [m]
   (reduce-kv
@@ -26,17 +16,36 @@
                     :else (pr-str v))))
    {} m))
 
+(defn signal->opensearch-log
+  [{:keys [thread location] :as signal}]
+  (-> (select-keys signal [:level :ctx :data :msg_ :error :uid :inst])
+      (merge {"thread/group" (:group thread)
+              "thread/name" (:name thread)
+              "thread/id" (:id thread)
+              :location (str (:ns location) ":"
+                             (:line location) "x"
+                             (:column location))})
+      (->str-values)
+      (json/write-str)))
+
+(defn build-opensearch-base-req
+  [config index]
+  (let [{:keys [username password host port]} config
+        url (str "https://" host ":" port "/_bulk")]
+    {:method :post
+     :url url
+     :basic-auth [username password]
+     :content-type :json
+     :body (json/write-str {:index {:_index index}})}))
+
 (defn send-opensearch-log-req
   [base-req log]
   (http-client/request
-   (update
-    base-req :body
-    str \newline (json/write-str (->str-values log)) \newline)
-   identity #(throw ^Exception %)))
+   (update base-req :body str \newline log \newline)))
 
-(defonce log-ch (atom (async/chan)))
+(defonce log-ch (atom nil))
 
-(defn setup [config level env]
+(defn setup [config level env & [index]]
   (let [prod? (= env :prod)
         log-ch' (swap!
                  log-ch
@@ -48,7 +57,7 @@
 
     (when (and prod? (instance? ManyToManyChannel log-ch'))
       (let [os-cfg (when prod? (:opensearch config))
-            os-base-req (build-opensearch-base-req os-cfg)]
+            os-base-req (build-opensearch-base-req os-cfg index)]
 
         (t/set-ns-filter! {:disallow #{"*jetty*" "*hikari*"
                                        "*pedestal*" "*migratus*"}})
@@ -57,66 +66,31 @@
          :opensearch
          (fn [signal]
            (async/go
-             (async/>!
-              log-ch'
-              (select-keys signal [:level :ctx :data :msg_ :error
-                                   :thread :uid :inst])))))
+             (async/>! log-ch' (signal->opensearch-log signal)))))
 
         (async/go
           (while true
             (let [[log _] (async/alts! [log-ch'])]
               (send-opensearch-log-req os-base-req log))))))))
 
-(comment
-  (def my-signal
-    (t/with-signal
-      (t/log! {:level :info
-               :data {:hello true
-                      :time "hello world"}}
-              "hello")))
-
-  (def base-req
-    (build-opensearch-base-req
-     {:username "foobar"
-      :password "foobar"
-      :host "foobar"
-      :port 25060}))
-
-  (http-client/request
-   (update
-    base-req :body
-    str
-    \newline
-    (json/write-str my-signal)
-    \newline))
-  ;;
-  )
-
 (defn log [level msg & [:as data]]
   (t/log! {:level level
            :data (first data)}
           (str msg)))
 
-(comment
-  ;; DEPRECATED
-  (defmacro log [level & args]
-    `(timbre/log ~level ~@args))
-  ;;
-  )
-
 (defn gen-ctx-with-cid []
   {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
 
 (comment
-  log-ch
-  
+  @log-ch
+
   (setup {:opensearch
           {:username "foobar"
            :password "foobar"
            :host "foobar"
            :port 25060}}
-         :info :prod)
+         :info :prod "moclojer-api-logs")
 
-  (log :info "something happened" {:user "j0suetm"})
+  (log :error "something happened" {:user "j0suetm"})
   ;;
   )
