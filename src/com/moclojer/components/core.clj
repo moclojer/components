@@ -17,6 +17,8 @@
   ([filepath input-map]
    (config/map->Config {:config (config/read-config filepath input-map)})))
 
+(def setup-logger logs/setup)
+
 (defn new-database []
   (database/map->Database {}))
 

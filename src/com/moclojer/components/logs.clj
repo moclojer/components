@@ -7,6 +7,10 @@
   (:import [clojure.core.async.impl.channels ManyToManyChannel]))
 
 (defn ->str-values
+  "Adapts all values (including nested maps' values) from given
+  map `m` to a string.
+
+  This is because OpenSearch only accepts string json values."
   [m]
   (reduce-kv
    (fn [acc k v]
@@ -17,6 +21,7 @@
    {} m))
 
 (defn signal->opensearch-log
+  "Adapts a telemere signal to a pre-defined schema for OpenSearch."
   [{:keys [thread location] :as signal}]
   (-> (select-keys signal [:level :ctx :data :msg_ :error :uid :inst])
       (merge {"thread/group" (:group thread)
@@ -45,7 +50,11 @@
 
 (defonce log-ch (atom nil))
 
-(defn setup [config level env & [index]]
+(defn setup
+  "If on dev `env`, does basically nothing besides setting the min
+  level. On `prod` env however, an async channel waits for log events,
+  which are then sent to OpenSearch."
+  [config level env & [index]]
   (let [prod? (= env :prod)
         log-ch' (swap!
                  log-ch
