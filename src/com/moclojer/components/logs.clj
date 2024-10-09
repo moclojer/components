@@ -27,9 +27,9 @@
       (merge {"thread/group" (:group thread)
               "thread/name" (:name thread)
               "thread/id" (:id thread)
-              :location (str (:ns location) ":"
-                             (:line location) "x"
-                             (:column location))})
+              "location" (str (:ns location) ":"
+                              (:line location) "x"
+                              (:column location))})
       (->str-values)
       (json/write-str)))
 
