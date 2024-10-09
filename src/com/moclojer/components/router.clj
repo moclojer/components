@@ -1,7 +1,6 @@
 (ns com.moclojer.components.router
   (:require
    [com.moclojer.components.logs :as logs]
-   [com.moclojer.components.sentry :as sentry]
    [com.stuartsierra.component :as component]
    [muuntaja.core :as m]
    [reitit.coercion.malli :as reitit.malli]
@@ -17,17 +16,12 @@
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]))
 
-(defn send-sentry-evt-from-req! [req ex]
-  (if-let [sentry-cmp (get-in req [:components :sentry])]
-    (sentry/send-event! sentry-cmp {:throwable ex})
-    (logs/log :error "failed to send sentry event (nil component)")))
-
 (defn- coercion-error-handler [status]
   (fn [exception request]
     (logs/log :error "failed to coerce req/resp"
               :ctx {:ex-message (.getMessage exception)
                     :coercion (:errors (ex-data exception))})
-    (send-sentry-evt-from-req! request exception)
+    (logs/send-sentry-evt-from-req! request exception)
     {:status status
      :body (if (= 400 status)
              (str "Invalid path or request parameters, with the following errors: "
@@ -37,7 +31,7 @@
 (defn- exception-info-handler [exception request]
   (logs/log :error "server exception"
             :ctx {:ex-message (.getMessage exception)})
-  (send-sentry-evt-from-req! request exception)
+  (logs/send-sentry-evt-from-req! request exception)
   {:status 500
    :body   "Internal error."})
 

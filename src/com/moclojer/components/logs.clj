@@ -3,8 +3,14 @@
    [clojure.core.async :as async]
    [clojure.data.json :as json]
    [clj-http.client :as http-client]
+   [com.moclojer.components.sentry :as sentry]
    [taoensso.telemere :as t])
   (:import [clojure.core.async.impl.channels ManyToManyChannel]))
+
+(defn send-sentry-evt-from-req! [req ex]
+  (if-let [sentry-cmp (get-in req [:components :sentry])]
+    (sentry/send-event! sentry-cmp {:throwable ex})
+    (prn :error "failed to send sentry event (nil component)")))
 
 (defn ->str-values
   "Adapts all values (including nested maps' values) from given
@@ -45,8 +51,11 @@
 
 (defn send-opensearch-log-req
   [base-req log]
-  (http-client/request
-   (update base-req :body str \newline log \newline)))
+  (try
+    (http-client/request
+     (update base-req :body str \newline log \newline))
+    (catch Exception e
+      (send-sentry-evt-from-req! base-req e))))
 
 (defonce log-ch (atom nil))
 
@@ -55,16 +64,15 @@
   level. On `prod` env however, an async channel waits for log events,
   which are then sent to OpenSearch."
   [config level env & [index]]
-  (let [prod? (= env :prod)
-        log-ch' (swap!
-                 log-ch
-                 (fn [ch]
-                   (when ch (async/close! ch))
-                   (async/chan)))]
+  (let [prod? (= env :prod)]
+
+    (when-let [ch @log-ch]
+      (async/close! ch))
+    (reset! log-ch (async/chan))
 
     (t/set-min-level! level)
 
-    (when (and prod? (instance? ManyToManyChannel log-ch'))
+    (when (and prod? (instance? ManyToManyChannel @log-ch))
       (let [os-cfg (when prod? (:opensearch config))
             os-base-req (build-opensearch-base-req os-cfg index)]
 
@@ -75,11 +83,11 @@
          :opensearch
          (fn [signal]
            (async/go
-             (async/>! log-ch' (signal->opensearch-log signal)))))
+             (async/>! @log-ch (signal->opensearch-log signal)))))
 
         (async/go
           (while true
-            (let [[log _] (async/alts! [log-ch'])]
+            (let [[log _] (async/alts! [@log-ch])]
               (send-opensearch-log-req os-base-req log))))))))
 
 (defn log [level msg & [:as data]]
