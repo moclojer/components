@@ -90,9 +90,9 @@
             (let [[log _] (async/alts! [@log-ch])]
               (send-opensearch-log-req os-base-req log))))))))
 
-(defn log [level msg & [:as data]]
+(defn log [level msg & [data]]
   (t/log! {:level level
-           :data (first data)}
+           :data data}
           (str msg)))
 
 (defn gen-ctx-with-cid []
