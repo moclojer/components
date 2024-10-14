@@ -28,15 +28,13 @@
   map `m` to a string.
 
   This is because OpenSearch only accepts string json values."
-  [m]
-  (reduce-kv
-   (fn [acc k v]
-     (assoc acc k (cond-> v
-                    (map? v) ->str-values
-                    (string? v) identity
-                    (boolean? v) identity
-                    :else str)))
-   {} m))
+  [v]
+  (cond
+    (map? v) (reduce-kv (fn [m k v] (assoc m k (->str-values v))) {} v)
+    (coll? v) (into (empty v) (map ->str-values v))
+    (string? v) v
+    (nil? v) v
+    :else (str v)))
 
 (defn signal->opensearch-log
   "Adapts a telemere signal to a pre-defined schema for OpenSearch."
