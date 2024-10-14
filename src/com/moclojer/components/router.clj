@@ -29,7 +29,11 @@
 (defn- coercion-error-handler [status]
   (fn [exception request]
     (logs/log :error "failed to coerce req/resp"
-              nil nil exception)
+              (logs/log :error "Failed to coerce request/response"
+                        {:uri (:uri request)
+                         :method (:request-method request)}
+                        nil
+                        exception)
     (send-sentry-evt-from-req! request exception)
     {:status status
      :body (if (= 400 status)
