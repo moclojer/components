@@ -21,6 +21,7 @@
   (component/start-system
    (component/system-map
     :config (components/new-config "config.example.edn")
+    :logger (component/using (components/new-logger) [:config])
     :database (component/using (components/new-database) [:config]))))
 
 (defflow flow-database-test

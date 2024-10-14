@@ -13,15 +13,24 @@
    [reitit.http.interceptors.parameters :as parameters]
    [reitit.pedestal :as pedestal]
    [reitit.ring :as ring]
+   [com.moclojer.components.sentry :as sentry]
    [reitit.swagger :as swagger]
    [reitit.swagger-ui :as swagger-ui]))
+
+(defn send-sentry-evt-from-req! [req data-ex]
+  (let [sentry-cmp (get-in req [:components :sentry])]
+    (try
+      (sentry/send-event! sentry-cmp {:throwable data-ex})
+      (catch Exception sentry-ex
+        (logs/log-console!
+         :error "failed to send sentry event"
+         {:event data-ex} sentry-ex)))))
 
 (defn- coercion-error-handler [status]
   (fn [exception request]
     (logs/log :error "failed to coerce req/resp"
-              :ctx {:ex-message (.getMessage exception)
-                    :coercion (:errors (ex-data exception))})
-    (logs/send-sentry-evt-from-req! request exception)
+              nil nil exception)
+    (send-sentry-evt-from-req! request exception)
     {:status status
      :body (if (= 400 status)
              (str "Invalid path or request parameters, with the following errors: "
@@ -30,8 +39,8 @@
 
 (defn- exception-info-handler [exception request]
   (logs/log :error "server exception"
-            :ctx {:ex-message (.getMessage exception)})
-  (logs/send-sentry-evt-from-req! request exception)
+            nil nil exception)
+  (send-sentry-evt-from-req! request exception)
   {:status 500
    :body   "Internal error."})
 

@@ -1,7 +1,7 @@
 (ns com.moclojer.components.sentry
   (:require
-   [com.stuartsierra.component :as component]
    [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component]
    [sentry-clj.core :as sentry]
    [sentry-clj.tracing :as sentry-tr])
   (:import
@@ -15,36 +15,28 @@
   component/Lifecycle
   (start [this]
     (let [sentry-cfg (get-in config [:config :sentry])]
-      (when (:dns sentry-cfg)
-        (println "starting sentry" :env (:env sentry-cfg))
-        (sentry/init! (:dns sentry-cfg) sentry-cfg)
+      (when-let [dns (:dns sentry-cfg)]
+        (logs/log-console!
+         :info "starting sentry" (select-keys config [:env]))
+        (sentry/init! dns sentry-cfg)
         (set-as-default-exception-handler this)))
     this)
   (stop [_])
 
   SentryLogger
-  (send-event! [this event]
-    ;; checking `this` just incase something goes wrong when
-    ;; calling from a dev system, which doesn't initialize
-    ;; this component. Same goes for `set-as-default-exception-handler`.
-    ;; Just not doing anything would be the best deal for now,
-    ;; since sentry isn't part of our logic in any sort of way.
-    (when this
-      (try
-        (let [evt-id (sentry/send-event event)]
-          (logs/log :info "sent event"
-                    :ctx {:event-id evt-id}))
-        (catch Exception e
-          (logs/log :error "failed to send event"
-                    :ctx {:ex-message (.getMessage e)})))))
+  (send-event! [_ event]
+    (try
+      (sentry/send-event event)
+      (catch Exception e
+        (logs/log-console!
+         :error "failed to send sentry event"
+         {:event event} e))))
 
   (set-as-default-exception-handler [this]
-    (when this
-      (Thread/setDefaultUncaughtExceptionHandler
-       (reify Thread$UncaughtExceptionHandler
-         (uncaughtException [_ _ exception]
-           (logs/log :warn "uncaught exception")
-           (send-event! this {:throwable exception})))))))
+    (Thread/setDefaultUncaughtExceptionHandler
+     (reify Thread$UncaughtExceptionHandler
+       (uncaughtException [_ _ exception]
+         (send-event! this {:throwable exception}))))))
 
 (defrecord SentryMock [config]
   component/Lifecycle

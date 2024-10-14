@@ -1,16 +1,27 @@
 (ns com.moclojer.components.logs
   (:require
+   [com.moclojer.components.logs :as logs]
+   [com.stuartsierra.component :as component]
    [clojure.core.async :as async]
    [clojure.data.json :as json]
    [clj-http.client :as http-client]
-   [com.moclojer.components.sentry :as sentry]
    [taoensso.telemere :as t])
-  (:import [clojure.core.async.impl.channels ManyToManyChannel]))
+  (:import
+   [clojure.core.async.impl.channels ManyToManyChannel]))
 
-(defn send-sentry-evt-from-req! [req ex]
-  (if-let [sentry-cmp (get-in req [:components :sentry])]
-    (sentry/send-event! sentry-cmp {:throwable ex})
-    (prn :error "failed to send sentry event (nil component)")))
+(let [log! (t/handler:console nil)]
+  (defn log-console!
+    "Uses telemere's console logger explicitly
+    so other added handlers don't trigger."
+    ([level msg]
+     (log-console! level msg nil nil))
+    ([level msg data]
+     (log-console! level msg data nil))
+    ([level msg data error]
+     (log! {:level level
+            :data data
+            :error error
+            :msg_ msg}))))
 
 (defn ->str-values
   "Adapts all values (including nested maps' values) from given
@@ -20,16 +31,17 @@
   [m]
   (reduce-kv
    (fn [acc k v]
-     (assoc acc k (cond
-                    (map? v) (->str-values v)
-                    (string? v) (identity v)
-                    :else (pr-str v))))
+     (assoc acc k (cond-> v
+                    (map? v) ->str-values
+                    (string? v) identity
+                    (boolean? v) identity
+                    :else str)))
    {} m))
 
 (defn signal->opensearch-log
   "Adapts a telemere signal to a pre-defined schema for OpenSearch."
   [{:keys [thread location] :as signal}]
-  (-> (select-keys signal [:level :ctx :data :msg_ :error :uid :inst])
+  (-> (select-keys signal [:level :ctx :data :msg_ :uid :inst])
       (merge {"thread/group" (:group thread)
               "thread/name" (:name thread)
               "thread/id" (:id thread)
@@ -37,11 +49,12 @@
                               (:line location) "x"
                               (:column location))})
       (->str-values)
+      (assoc :error (:error signal))
       (json/write-str)))
 
 (defn build-opensearch-base-req
-  [config index]
-  (let [{:keys [username password host port]} config
+  [config]
+  (let [{:keys [username password host port index]} config
         url (str "https://" host ":" port "/_bulk")]
     {:method :post
      :url url
@@ -55,59 +68,72 @@
     (http-client/request
      (update base-req :body str \newline log \newline))
     (catch Exception e
-      (send-sentry-evt-from-req! base-req e))))
+      (log-console! :error "failed to send opensearch log"
+                    {:log log} e))))
 
-(defonce log-ch (atom nil))
+;; If on dev `env`, does basically nothing besides setting the min
+;; level. On `prod` env however, an async channel waits for log events,
+;; which are then sent to OpenSearch.
+(defrecord Logger [config]
+  component/Lifecycle
+  (start [this]
+    (let [prod? (= (:env config) :prod)
+          os-cfg (:opensearch config)
+          log-ch (async/chan)
+          os-base-req (build-opensearch-base-req os-cfg)]
 
-(defn setup
-  "If on dev `env`, does basically nothing besides setting the min
-  level. On `prod` env however, an async channel waits for log events,
-  which are then sent to OpenSearch."
-  [config level env & [index]]
-  (let [prod? (= env :prod)]
+      (t/set-min-level!
+       (or (get-in config [:logger :min-level]) :info))
 
-    (when-let [ch @log-ch]
-      (async/close! ch))
-    (reset! log-ch (async/chan))
-
-    (t/set-min-level! level)
-
-    (when (and prod? (instance? ManyToManyChannel @log-ch))
-      (let [os-cfg (when prod? (:opensearch config))
-            os-base-req (build-opensearch-base-req os-cfg index)]
-
+      (when (and prod? (instance? ManyToManyChannel log-ch))
         (t/set-ns-filter! {:disallow #{"*jetty*" "*hikari*"
                                        "*pedestal*" "*migratus*"}})
 
         (t/add-handler!
-         :opensearch
+         ::opensearch
          (fn [signal]
            (async/go
-             (async/>! @log-ch (signal->opensearch-log signal)))))
+             (async/>! log-ch (signal->opensearch-log signal)))))
 
         (async/go
           (while true
-            (let [[log _] (async/alts! [@log-ch])]
-              (send-opensearch-log-req os-base-req log))))))))
+            (let [[log _] (async/alts! [log-ch])]
+              (send-opensearch-log-req os-base-req log)))))
 
-(defn log [level msg & [data]]
-  (t/log! {:level level
-           :data data}
-          (str msg)))
+      (assoc this :log-ch log-ch)))
+  (stop [this]
+    (t/remove-handler! ::opensearch)
+    (update this :log-ch #(when % (async/close! %)))))
+
+(defn log
+  ([level msg]
+   (log level msg nil nil nil))
+  ([level msg data]
+   (log level msg data nil nil))
+  ([level msg data ctx]
+   (log level msg data ctx nil))
+  ([level msg data ctx error]
+   (t/log! {:level level
+            :ctx ctx
+            :data data
+            :error error}
+           (str msg))))
 
 (defn gen-ctx-with-cid []
   {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
 
 (comment
-  @log-ch
+  (component/start
+   (map->Logger
+    {:config
+     {:env :prod
+      :opensearch
+      {:username "foobar"
+       :password "foobar"
+       :host "foobar"
+       :port 25060
+       :index "components-test-logs"}}}))
 
-  (setup {:opensearch
-          {:username "foobar"
-           :password "foobar"
-           :host "foobar"
-           :port 25060}}
-         :info :prod "moclojer-api-logs")
-
-  (log :error "something happened" {:user "j0suetm"})
+  (log :error "something happened" {:hello true})
   ;;
   )

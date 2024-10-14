@@ -16,9 +16,9 @@
   component/Lifecycle
   (start [this]
     (let [{:keys [config-path join?]} (-> config :config :moclojer)]
-      (logs/log :info :moclojer-start
-                :info-server {:config-path config-path
-                              :join? join?})
+      (logs/log :info "starting moclojer server"
+                {:server {:config-path config-path
+                          :join? join?}})
       (on-startup-fn storage config-path)
       (assoc this :moclojer
              (moclojer-server!

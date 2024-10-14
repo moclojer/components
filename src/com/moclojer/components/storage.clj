@@ -83,10 +83,10 @@
 
   (upload! [this bucket-name filename value content-type ctx]
     (logs/log :info "uploading to storage"
-              :ctx (merge ctx {:bucket bucket-name
-                               :filename filename
-                               :content-type content-type
-                               :value value}))
+              (merge ctx {:bucket bucket-name
+                          :filename filename
+                          :content-type content-type
+                          :value value}))
     (-> (-> this :storage)
         (aws/invoke {:op :PutObject
                      :Content-Type content-type

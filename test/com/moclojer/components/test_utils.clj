@@ -8,7 +8,6 @@
 (defn start-system!
   [system-start-fn]
   (fn []
-    (components/setup-logger :info :auto :dev)
     (pg-emb/init-pg)
     (migrations/migrate (migrations/build-complete-db-config "config.example.edn"))
     (system-start-fn)))

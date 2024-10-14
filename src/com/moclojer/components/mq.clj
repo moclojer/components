@@ -40,10 +40,11 @@
              (try
                (handler-fn message components)
                (catch Throwable ex
-                 (logs/log :error "failed to handle worker"
-                           :ctx {:worker worker
-                                 :message message
-                                 :ex-message (.getMessage ex)})
+                 (logs/log
+                  :error "worker failed to handle message"
+                  {:worker worker
+                   :message message}
+                  nil ex)
                  (sentry/send-event! sentry {:throwable ex})))))))
 
 (defrecord MQ [config database storage http sentry workers jobs blocking?]
@@ -79,9 +80,9 @@
         (apply op-fn op-args))
       (catch Throwable ex
         (logs/log :error "failed to exec mq operation"
-                  :ctx (merge ctx {:op-name op-name
-                                   :args args
-                                   :ex-message (.getMessage ex)}))
+                  (merge ctx {:op-name op-name
+                              :args args})
+                  nil ex)
         (sentry/send-event! (get-in this [:components :sentry])
                             {:throwable ex}))))
   (start-job! [this job]
@@ -89,15 +90,14 @@
            :or {sleep 2000
                 ;; max-attempts of `0` means infinite attempts.
                 max-attempts 0}} job]
-      (logs/log :info "starting job" :ctx {:job job})
+      (logs/log :info "starting job" {:job job})
       (future
         (loop [attempt 1]
           (let [infinite-attempts? (<= max-attempts 0)
                 attempt? (<= attempt max-attempts)]
             (when (or infinite-attempts? attempt?)
-              (logs/log :info "running job"
-                        :ctx {:job job
-                              :attempt attempt})
+              (logs/log :info "running job" {:job job
+                                             :attempt attempt})
               (try-op! this :publish! [channel event] {})
               (Thread/sleep sleep)
               (recur (inc attempt)))))))))

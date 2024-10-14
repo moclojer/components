@@ -13,8 +13,7 @@
   "Builds a simple logger for debugging purposes."
   [ctx]
   (fn [operation query]
-    (logs/log :info operation
-              :ctx (assoc ctx :query query))))
+    (logs/log :info operation (assoc ctx :query query))))
 
 (defprotocol DatabaseProvider
   (execute [self command ctx]
@@ -24,7 +23,7 @@
   component/Lifecycle
   (start [this]
     (let [{:keys [jdbc-url]} (get-in config [:config :database])]
-      (logs/log :info "starting database")
+      (logs/log :info "starting database" (select-keys config [:env]))
       (if datasource
         this
         (assoc this :datasource (connection/->pool HikariDataSource {:jdbcUrl (to-jdbc-uri jdbc-url)})))))

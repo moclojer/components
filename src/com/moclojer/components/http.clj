@@ -38,15 +38,15 @@
   (request
     [_ {:keys [method url] :as request-input} ctx]
     (logs/log :info "sending http request"
-              :ctx (merge ctx {:method method
-                               :url url}))
+              (merge ctx {:method method
+                          :url url}))
     (let [start-time (System/currentTimeMillis)
           {:keys [status] :as response} (request-fn request-input)
           end-time (System/currentTimeMillis)
           total-time (- end-time start-time)]
       (logs/log :info "received http response"
-                :ctx (merge ctx {:response-time-millis total-time
-                                 :status status}))
+                (merge ctx {:response-time-millis total-time
+                            :status status}))
       response))
   (request-or-throw
     [this req expected-status ctx]
@@ -55,9 +55,9 @@
         resp
         (do
           (logs/log :error "failed critical request. throwing..."
-                    :ctx (merge ctx {:url (:url req)
-                                     :status status
-                                     :expected-status expected-status}))
+                    (merge ctx {:url (:url req)
+                                :status status
+                                :expected-status expected-status}))
           (throw (ex-info "failed critical request"
                           (merge ctx {:status status
                                       :expected-status expected-status
@@ -90,9 +90,7 @@
                    first :response
                    (or {:status 500
                         :body "mocked response not set"}))]
-      (logs/log :info "sending http request"
-                :ctx (merge ctx mreq))
-
+      (logs/log :info "sending http request" (merge ctx mreq))
       (assoc
        (if (fn? resp) (resp req) resp)
        :instant (System/currentTimeMillis))))
@@ -103,9 +101,9 @@
         resp
         (do
           (logs/log :error "failed critical request. throwing..."
-                    :ctx (merge ctx {:url (:url req)
-                                     :status status
-                                     :expected-status expected-status}))
+                    (merge ctx {:url (:url req)
+                                :status status
+                                :expected-status expected-status}))
           (throw (ex-info "failed critical request"
                           (merge ctx {:status status
                                       :expected-status expected-status

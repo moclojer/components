@@ -35,9 +35,10 @@
    ::log-request
    (fn [req]
      (logs/log
-      :info (str (str/lower-case (name (:request-method req))) " " (:uri req))
-      :ctx (apply dissoc req [:body :components :servlet :servlet-request
-                              :servlet-response]))
+      :info (str (str/lower-case (name (:request-method req))) " "
+                 (:uri req))
+      (apply dissoc req [:body :components :servlet :servlet-request
+                         :servlet-response]))
      req)))
 
 (defn base-service [port]
@@ -82,7 +83,7 @@
            :keys [env]} (:config config)
           init-fn (if (= env :dev) dev-init prod-init)]
       (logs/log :info "starting webserver config"
-                :ctx {:env env :port port})
+                {:env env :port port})
       (assoc this :webserver
              (-> (base-service port)
                  (init-fn (:router router))

@@ -3,6 +3,7 @@
                 :default :dev
                 :prod :prod}
  :release "1.0.0"
+ :logger {:min-level :info}
  :moclojer {:config-path #profile {:default "resources/moclojer.yml"
                                    :prod "moclojer.yml"}
             :join? #profile {:default false
@@ -25,7 +26,8 @@
  :opensearch {:username #or [#env OPENSEARCH_USERNAME "foobar"]
               :password #or [#env OPENSEARCH_PASSWORD "foobar"]
               :host #or [#env OPENSEARCH_HOST "foobar.com"]
-              :port #or [#env OPENSEARCH_PORT 00000]}
+              :port #or [#env OPENSEARCH_PORT 00000]
+              :index "my-logs"}
  :mq  {:uri #or [#env MQ_URL "redis://localhost:6379"]}
  :database {:dbtype "postgres"
             :jdbc-url #or [#env DATABASE_URL "postgresql://localhost:5432/postgres?user=postgres&password=postgres"]}}
