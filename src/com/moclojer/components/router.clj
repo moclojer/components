@@ -33,7 +33,7 @@
                         {:uri (:uri request)
                          :method (:request-method request)}
                         nil
-                        exception)
+                        exception))
     (send-sentry-evt-from-req! request exception)
     {:status status
      :body (if (= 400 status)

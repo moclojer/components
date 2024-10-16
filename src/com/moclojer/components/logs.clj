@@ -13,15 +13,11 @@
   (defn log-console!
     "Uses telemere's console logger explicitly
     so other added handlers don't trigger."
-    ([level msg]
-     (log-console! level msg nil nil))
-    ([level msg data]
-     (log-console! level msg data nil))
-    ([level msg data error]
-     (log! {:level level
-            :data data
-            :error error
-            :msg_ msg}))))
+    [level msg & [data error]]
+    (log! {:level level
+           :data data
+           :error error
+           :msg_ msg})))
 
 (defn ->str-values
   "Adapts all values (including nested maps' values) from given
@@ -104,18 +100,12 @@
     (update this :log-ch #(when % (async/close! %)))))
 
 (defn log
-  ([level msg]
-   (log level msg nil nil nil))
-  ([level msg data]
-   (log level msg data nil nil))
-  ([level msg data ctx]
-   (log level msg data ctx nil))
-  ([level msg data ctx error]
-   (t/log! {:level level
-            :ctx ctx
-            :data data
-            :error error}
-           (str msg))))
+  [level msg & [data ctx error]]
+  (t/log! {:level level
+           :ctx ctx
+           :data data
+           :error error}
+          (str msg)))
 
 (defn gen-ctx-with-cid []
   {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
