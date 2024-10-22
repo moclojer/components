@@ -1,6 +1,5 @@
 (ns com.moclojer.components.logs
   (:require
-   [com.moclojer.components.logs :as logs]
    [com.stuartsierra.component :as component]
    [clojure.core.async :as async]
    [clojure.data.json :as json]
@@ -34,11 +33,17 @@
 
 (defn signal->opensearch-log
   "Adapts a telemere signal to a pre-defined schema for OpenSearch."
-  [{:keys [thread location] :as signal}]
-  (-> (select-keys signal [:level :ctx :data :msg_ :uid :inst])
-      (merge {"thread/group" (:group thread)
+  [{:keys [thread location parent root msg_] :as signal}]
+  (-> (select-keys signal [:level :ctx :data :uid :id
+                           :inst :end-inst :run-nsecs])
+      (merge {"msg_" (when-not (delay? msg_) msg_)
+              "thread/group" (:group thread)
               "thread/name" (:name thread)
               "thread/id" (:id thread)
+              "parent/uid" (:uid parent)
+              "parent/id" (:id parent)
+              "root/uid" (:uid root)
+              "root/id" (:id root)
               "location" (str (:ns location) ":"
                               (:line location) "x"
                               (:column location))})
@@ -99,6 +104,13 @@
     (t/remove-handler! ::opensearch)
     (update this :log-ch #(when % (async/close! %)))))
 
+(defmacro trace
+  [id data & body]
+  `(taoensso.telemere/trace!
+    {:id ~id
+     :data ~data}
+    (do ~@body)))
+
 (defn log
   [level msg & [data ctx error]]
   (t/log! {:level level
@@ -111,17 +123,21 @@
   {:cid (str "cid-" (random-uuid) "-" (System/currentTimeMillis))})
 
 (comment
-  (component/start
-   (map->Logger
-    {:config
-     {:env :prod
-      :opensearch
-      {:username "foobar"
-       :password "foobar"
-       :host "foobar"
-       :port 25060
-       :index "components-test-logs"}}}))
+  (def logger
+    (map->Logger
+     {:config
+      {:env :prod
+       :opensearch
+       {:username "foobar"
+        :password "foobar"
+        :host "foobar"
+        :port 25060
+        :index "components-test-logs"}}}))
 
-  (log :error "something happened" {:hello true})
+  (component/start logger)
+  (component/stop logger)
+
+  (trace ::testing-stuff {:testing? :definitely}
+   (log :error "aaaaa aaaa" {:hello true}))
   ;;
   )
