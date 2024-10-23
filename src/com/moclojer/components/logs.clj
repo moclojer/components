@@ -73,10 +73,10 @@
 ;; If on dev `env`, does basically nothing besides setting the min
 ;; level. On `prod` env however, an async channel waits for log events,
 ;; which are then sent to OpenSearch.
-(defrecord Logger [cfg]
+(defrecord Logger [config]
   component/Lifecycle
   (start [this]
-    (let [config (:config cfg)
+    (let [config (:config config)
           prod? (= (:env config) :prod)
           os-cfg (:opensearch config)
           log-ch (async/chan)
